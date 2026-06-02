@@ -1,0 +1,121 @@
+REPORT z_projetoloto.
+
+TABLES: zbetest.
+
+SELECT-OPTIONS:
+  s_num  FOR zbetest-numero1 no INTERVALS,
+  s_date FOR sy-datum.
+
+TYPES: BEGIN OF ty_vezes,
+         numero TYPE numc2,
+         vezes  TYPE numc5,
+       END OF ty_vezes.
+
+DATA:
+  lt_loteria TYPE TABLE OF zbetest,
+  ls_loteria TYPE zbetest,
+  lv_total   TYPE i,
+  lt_vezes   TYPE TABLE OF ty_vezes,
+  ls_vezes   TYPE ty_vezes,
+  ls_num_t   LIKE LINE OF s_num,
+  lv_error   TYPE CHAR1,
+  lv_wrong   TYPE CHAR1,
+  lt_numeros type Z_BEATEST_..
+
+START-OF-SELECTION.
+
+  SELECT * FROM zbetest INTO TABLE lt_loteria
+    WHERE data IN s_date.
+
+LOOP AT s_num INTO ls_num_t.
+
+  APPEND ls_num_t-low to lt_numeros.
+
+ENDLOOP.
+
+CALL FUNCTION 'Z_BEATEST'
+  EXPORTING
+    i_numeros = lt_numeros
+  IMPORTING
+    e_error = lv_error
+    e_wrong = lv_wrong.
+
+IF lv_error is not initial.
+  WRITE: 'Existe número inválido. Digite valores de 1 a 60.'.
+  STOP.
+ENDIF.
+
+IF lv_wrong is not initial.
+  WRITE: 'Existem números repetidos.'.
+  STOP.
+ENDIF.
+
+  LOOP AT s_num INTO ls_num_t.
+
+    CLEAR lv_total.
+    LOOP AT lt_loteria INTO ls_loteria.
+
+      PERFORM conta_numero USING    ls_num_t-low
+                           CHANGING lv_total.
+
+    ENDLOOP.
+
+
+    ls_vezes-numero = ls_num_t-low.
+    ls_vezes-vezes  = lv_total.
+
+    APPEND ls_vezes TO lt_vezes.
+    CLEAR ls_vezes.
+
+  ENDLOOP.
+
+
+DATA: go_salv    TYPE REF TO cl_salv_table,
+      go_columns TYPE REF TO cl_salv_columns_table,
+      go_column  TYPE REF TO cl_salv_column_table,
+      go_display TYPE REF TO cl_salv_display_settings,
+      go_funcs   TYPE REF TO cl_salv_functions_list.
+
+TRY.
+    CL_SALV_TABLE=>FACTORY(
+      IMPORTING r_salv_table = go_salv
+      CHANGING  t_table      = lt_vezes ).
+
+    go_funcs = go_salv->get_functions( ).
+    go_funcs->set_all( abap_true ).
+
+    go_display = go_salv->get_display_settings( ).
+    go_display->set_list_header( 'Frequência dos Números - Loteria' ).
+    go_display->set_striped_pattern( abap_true ).
+
+    go_columns = go_salv->get_columns( ).
+    go_columns->set_optimize( abap_true ).
+
+    go_column ?= go_columns->get_column( 'NUMERO' ).
+    go_column->set_long_text(   'Número'         ).
+    go_column->set_medium_text( 'Número'         ).
+    go_column->set_short_text(  'Nº'             ).
+
+    go_column ?= go_columns->get_column( 'VEZES' ).
+    go_column->set_long_text(   'Quantidade de Sorteios' ).
+    go_column->set_medium_text( 'Qtd. Sorteios'          ).
+    go_column->set_short_text(  'Sorteios'               ).
+
+    go_salv->display( ).
+
+  CATCH cx_salv_msg INTO DATA(lx_msg).
+    MESSAGE lx_msg->get_text( ) TYPE 'E'.
+  CATCH cx_salv_not_found INTO DATA(lx_nf).
+    MESSAGE lx_nf->get_text( ) TYPE 'E'.
+ENDTRY.
+
+FORM conta_numero USING    lv_num   TYPE znum1
+                  CHANGING lv_total TYPE i.
+
+  IF ls_loteria-numero1 = lv_num OR ls_loteria-numero2 = lv_num OR
+     ls_loteria-numero3 = lv_num OR ls_loteria-numero4 = lv_num OR
+     ls_loteria-numero5 = lv_num OR ls_loteria-numero6 = lv_num.
+    lv_total = lv_total + 1.
+  ENDIF.
+
+ENDFORM.
