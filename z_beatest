@@ -1,0 +1,34 @@
+FUNCTION z_beatest.
+*"----------------------------------------------------------------------
+*"*"Interface local:
+*"  IMPORTING
+*"     REFERENCE(I_NUMEROS) TYPE  Z_BEATEST_
+*"  EXPORTING
+*"     REFERENCE(E_ERROR) TYPE  CHAR1
+*"     REFERENCE(E_WRONG) TYPE  CHAR1
+*"----------------------------------------------------------------------
+
+  DATA:
+    numero1     TYPE zbeteste_s,
+    last_number TYPE i,
+    lt_numeros type Z_BEATEST_.
+
+*  SORT I_NUMEROS BY numero1.
+ lt_numeros = i_numeros.
+
+ sort lt_numeros BY numero1.
+
+  LOOP AT lt_numeros INTO numero1.
+
+    IF numero1-numero1 < 1 OR numero1-numero1 > 60.
+      e_error = 'x'.
+    ENDIF.
+
+    IF numero1-numero1 = last_number and last_number is not INITIAL.
+      e_wrong = 'x'.
+    ENDIF.
+
+    last_number = numero1-numero1.
+  ENDLOOP.
+
+ENDFUNCTION.
