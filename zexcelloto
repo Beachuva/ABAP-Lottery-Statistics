@@ -1,0 +1,101 @@
+REPORT zexcelloto.
+
+PERFORM f_excel.
+
+
+FORM f_excel.
+
+
+  TYPES:BEGIN OF ty_excel,
+          N             TYPE string,
+          Nome do Aluno TYPE string,
+          1 Bimestre    TYPE string,
+          2 Bimestre    TYPE string,
+          3 Bimestre    TYPE string,
+          4 Bimestre    TYPE string,
+          Media Final   TYPE string,
+        END OF ty_excel.
+
+  DATA: gt_file_table TYPE STANDARD TABLE OF string,
+        it_excel      TYPE STANDARD TABLE OF ty_excel,
+        ls_excel      TYPE  ty_excel,
+        lv_filename   TYPE string,
+        lt_file_table TYPE filetable,
+        lv_subrc      TYPE i,
+        lt_saida  TYPE STANDARD TABLE OF zbeteste,
+        ls_saida type zbeteste.
+
+
+
+  CLEAR: lv_filename, gt_file_table, lt_file_table.
+  CALL METHOD cl_gui_frontend_services=>file_open_dialog
+    EXPORTING
+      window_title     = 'Select File'
+      default_filename = '*.csv'
+      multiselection   = abap_true
+    CHANGING
+      file_table       = lt_file_table
+      rc               = lv_subrc.
+
+  READ TABLE lt_file_table INTO lv_filename INDEX 1.
+
+  CALL METHOD cl_gui_frontend_services=>gui_upload
+    EXPORTING
+      filename            = lv_filename
+      has_field_separator = abap_true
+    CHANGING
+      data_tab            = gt_file_table
+    EXCEPTIONS
+      file_open_error     = 1
+      file_read_error     = 2
+      OTHERS              = 18.
+  IF sy-subrc <> 0.
+    MESSAGE 'Erro ao abrir um arquivo' TYPE 'E'.
+    EXIT.
+  ENDIF.
+
+  DELETE gt_file_table INDEX 1.
+
+  LOOP AT gt_file_table INTO DATA(wa_file_table).
+
+
+
+
+
+    SPLIT wa_file_table AT ',' INTO ls_excel-concurso
+                                    ls_excel-data
+                                    ls_excel-numero1
+                                    ls_excel-numero2
+                                    ls_excel-numero3
+                                    ls_excel-numero4
+                                    ls_excel-numero5
+                                    ls_excel-numero6.
+
+  REPLACE ALL OCCURRENCES OF '/' IN ls_excel-data WITH ''.
+
+
+    APPEND ls_excel TO it_excel.
+
+
+  ENDLOOP.
+
+  LOOP AT it_excel INTO ls_excel .
+
+    CONCATENATE ls_excel-data+4(4) ls_excel-data+2(2) ls_excel-data(2) into ls_saida-data.
+
+   ls_saida-concurso =  ls_excel-concurso.
+*   ls_saida-data = ls_excel-data.
+   ls_saida-numero1 = ls_excel-numero1.
+   ls_saida-numero2 = ls_excel-numero2.
+   ls_saida-numero3 = ls_excel-numero3.
+   ls_saida-numero4 = ls_excel-numero4.
+   ls_saida-numero5 = ls_excel-numero5.
+   ls_saida-numero6 = ls_excel-numero6.
+
+   APPEND ls_saida to lt_saida.
+
+  ENDLOOP.
+
+  MODIFY zbetest from TABLE lt_saida.
+
+ENDFORM.
